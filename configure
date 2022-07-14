@@ -1,0 +1,5 @@
+#!/bin/bash
+
+rm -rf builddir
+
+meson --buildtype debugoptimized builddir

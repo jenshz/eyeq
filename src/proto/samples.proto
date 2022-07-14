@@ -1,0 +1,280 @@
+syntax = "proto3";
+
+package eyeq;
+
+message ServerRequest {
+	uint32 req_id = 7;
+
+	oneof req {
+		CreateStore create_store = 1;
+		ListStores  list_stores  = 2;
+		DeleteStore delete_store = 3;
+
+		WriteBlock write_block = 4;
+		ReadBlocks read_blocks = 5;
+
+		FlushStores flush_stores = 6;
+
+		CreateStream create_stream = 8;
+		ReadStream read_stream = 9;
+		SeekStream seek_stream = 10;
+		CloseStream close_stream = 11;
+		StreamInfo stream_info = 12;
+		ListStreams list_streams = 13;
+	}
+}
+
+message ServerResponse {
+	string error = 1;
+	uint32 req_id = 8;
+
+	oneof resp {
+		CreateStore.Response create_store_response = 2;
+		ListStores.Response list_stores_response = 3;
+		DeleteStore.Response delete_store_response = 4;
+
+		WriteBlock.Response write_block_response = 5;
+		ReadBlocks.Response read_blocks_response = 6;
+
+		FlushStores.Response flush_stores_response = 7;
+
+		CreateStream.Response create_stream_response = 9;
+		ReadStream.Response read_stream_response = 10;
+		SeekStream.Response seek_stream_response = 11;
+		CloseStream.Response close_stream_response = 12;
+		StreamInfo.Response stream_info_response = 13;
+		ListStreams.Response list_streams_response = 14;
+	}
+}
+
+enum StoreType {
+	MEMORY_STORE = 0;
+	FILE_STORE = 1;
+}
+
+message Store {
+	string name = 1;
+
+	string path = 2;
+
+	StoreType store_type = 3;
+
+	// Number of blocks
+	uint32 block_count = 4;
+
+	// Current write offset
+	uint32 block_offset = 5;
+
+	string file_path = 6;
+}
+
+message CreateStore {
+	message Response {
+		Store store = 1;
+	}
+
+	Store store = 1;
+}
+
+message ListStores {
+	message Response {
+		repeated Store stores = 1;
+	}
+
+	string path = 1;
+}
+
+message DeleteStore {
+	message Response {
+		bool success = 1;
+	}
+
+	string name = 1;
+	string path = 2;
+}
+
+message FlushStores {
+	message Response {
+		bool success = 1;
+	}
+}
+
+message Timestamp {
+	uint64 sec = 1;
+	uint64 nsec = 2;
+}
+
+message Block {
+	bytes data = 1;
+
+	// Valid indicates whether the block is a valid block (e.g. not uninitialized).
+	// In a new store, all blocks are uninitialized.
+	// bool valid = 1;
+
+	// // TS indicates the timestamp of the first sample in nanoseconds
+	// Timestamp ts = 2;
+
+	// // Each block specifies the sample rate
+	// uint32 sample_rate = 3;
+
+	// // Scale is used to scale the iq_data based on a (client-defined) reference value
+	// float scale = 4;
+
+	// // Samples are stored as little-endian 16-bit samples with I stored as the high 16 bits, and Q as the low 16 bits.
+	// repeated fixed32 iq_data = 5;
+}
+
+message WriteBlock {
+	message Response {
+		uint32 offset = 1;
+	}
+
+	string name = 1;
+	string path = 2;
+
+	// If offset >= 0, write to specific offset and do not increment write pointer
+	// If offset < 0, write this block at the current write pointer 
+	int32 offset = 3;
+
+	// Block to be written
+	Block block = 4;
+}
+
+message ReadBlocks {
+	message Response {
+		// Block response
+		Block block = 1;
+	}
+
+	// Store name 
+	string name = 1;
+
+	// Store path
+	string path = 2;
+
+	// Store block offset
+	uint32 offset = 3;
+
+	// Number of blocks to read
+	uint32 count = 4;
+}
+
+message StoreReaderStream {
+	string name = 1;
+	string path = 2;
+	uint32 start_block = 3;
+	uint32 end_block = 4;
+}
+
+message FrequencyTranslateStream {
+	float relative_frequency = 1;
+	float phase = 2;
+}
+
+message ConstMultiplyStream {
+	bool is_complex = 1;
+	float real = 2;
+	float imag = 3;
+}
+
+message FirFilterStream {
+	bool is_complex = 1;
+	repeated float filter_taps = 2;
+}
+
+message AbsStream {
+}
+
+message LogStream {
+	float log_base = 1; // e.g. 2 or 10
+}
+
+message StreamLayer {
+	oneof layer {
+		StoreReaderStream store_reader = 6;
+		FrequencyTranslateStream frequency_translate = 1;
+		ConstMultiplyStream const_multiply = 2;
+		FirFilterStream fir_filter = 3;
+		AbsStream abs_stream = 4;
+		LogStream log_stream = 5;
+	};
+}
+
+message Stream {
+	string path = 1;
+	string name = 2;
+
+	// Streams have a lifetime in seconds (or until the server reboots)
+	uint32 lifetime_seconds = 3;
+}
+
+// Streams are read-only cursors into the block stores
+// They have a current input offset, output offset, start and end block offsets.
+// Streams can subject the samples to various transformations:
+//  - Buffering
+//  - Multiplication by constant (used for scaling / rotation)
+//  - Frequency translation
+//  - FIR filtering
+//  - Decimation / Interpolation
+//  - Absolute value (abs(x))
+// NB: Samples from a stream are always float32.
+message CreateStream {
+	Stream stream = 1;
+
+	repeated StreamLayer layers = 2;
+
+	message Response {
+		Stream stream = 2;
+	}
+}
+
+message ReadStream {
+	string name = 1;
+	string path = 2;
+	uint32 sample_count = 3;
+
+	message Response {
+		uint32 block = 1;
+		Timestamp ts = 2;
+		repeated float samples = 3;
+		bool eos = 4;
+	}
+}
+
+message SeekStream {
+	string name = 1;
+	string path = 2;
+	uint32 block_id = 3;
+
+	message Response {
+		uint64 sample_offset = 1;
+		bool eos = 2;
+	}
+}
+
+message CloseStream {
+	string name = 1;
+	string path = 2;
+
+	message Response {}
+}
+
+message StreamInfo {
+	string path = 1;
+	string name = 2;
+
+	message Response {
+		Stream stream = 1;
+		uint32 block_id = 2;
+		uint64 sample_offset = 3;
+		bool eos = 4;
+	}	
+}
+
+message ListStreams {
+	message Response {
+		repeated Stream streams = 1;
+	}
+
+	string path = 1;
+}

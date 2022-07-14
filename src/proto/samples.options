@@ -1,0 +1,42 @@
+# eyeq.SampleBlock.iq_data max_count: 4064;
+eyeq.Block.data max_size: 16384;
+eyeq.Store.name max_size: 32;
+eyeq.Store.path max_size: 128;
+eyeq.Store.file_path max_size: 128;
+eyeq.ListStores.path max_size: 128;
+eyeq.DeleteStore.name max_size: 128;
+eyeq.DeleteStore.path max_size: 128;
+eyeq.ListStores.Response.stores max_count: 64;
+eyeq.WriteBlock.name max_size: 32;
+eyeq.WriteBlock.path max_size: 128;
+eyeq.ReadBlocks.name max_size: 32;
+eyeq.ReadBlocks.path max_size: 128;
+
+eyeq.ServerResponse.error max_size: 128;
+
+# Streams
+eyeq.Stream.name max_size: 32;
+eyeq.Stream.path max_size: 128;
+eyeq.StoreReaderStream.name max_size: 32;
+eyeq.StoreReaderStream.path max_size: 128;
+
+eyeq.FirFilterStream.filter_taps max_count: 256;
+
+eyeq.CreateStream.layers max_count: 10;
+
+eyeq.ReadStream.name max_size: 32;
+eyeq.ReadStream.path max_size: 128;
+
+eyeq.SeekStream.name max_size: 32;
+eyeq.SeekStream.path max_size: 128;
+
+eyeq.CloseStream.name max_size: 32;
+eyeq.CloseStream.path max_size: 128;
+
+eyeq.StreamInfo.name max_size: 32;
+eyeq.StreamInfo.path max_size: 128;
+
+eyeq.ListStreams.path max_size: 128;
+eyeq.ListStreams.Response.streams max_count: 64;
+
+eyeq.ReadStream.Response.samples max_count: 4096;
